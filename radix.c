@@ -303,10 +303,15 @@ static void radix_trie_iterate(const struct radix_trie *root,
                                struct radix_iter       *iter,
                                size_t                   i)
 {
+    size_t space, len;
+
     if (root) {
-        memcpy(&iter->buf[i], root->substr, minzu(iter->len - i, root->len));
+        space = (iter->len > i) ? iter->len - i : 0;
+        len = minzu(space, root->len);
+        memcpy(&iter->buf[i], root->substr, len);
         if (!root->substr[root->len - 1]) {
             /* This is a leaf node */
+            iter->buf[iter->len - 1] = '\0';
             if (iter->fn(iter->buf, iter->data)) {
                 longjmp(iter->env, 1);
             }
@@ -334,6 +339,8 @@ int radix_trie_foreach(const struct radix_trie *root,
     if (setjmp(iter.env)) {
         return 1;
     }
-    radix_trie_iterate(root, &iter, 0);
+    if (iter.len) {
+        radix_trie_iterate(root, &iter, 0);
+    }
     return 0;
 }
